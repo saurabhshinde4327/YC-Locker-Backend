@@ -27,6 +27,10 @@ const documentSchema = new mongoose.Schema({
     enum: ['image', 'pdf', 'word'],
     required: [true, 'File type is required'],
   },
+  category: {
+    type: String,
+    trim: true,
+  },
   isFavorite: {
     type: Boolean,
     default: false,

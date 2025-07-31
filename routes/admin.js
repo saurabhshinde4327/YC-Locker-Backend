@@ -12,6 +12,7 @@ const {
   deleteUser,
   uploadStudents
 } = require('../controllers/adminController');
+const User = require('../models/user');
 
 // Configure multer for file uploads (do this BEFORE using it!)
 const storage = multer.diskStorage({
@@ -131,6 +132,47 @@ router.get('/download-backup', auth, isSuperAdmin, (req, res) => {
       }
     })
     .pipe(res);
+});
+
+// Reset user password by admin
+router.post('/reset-password', auth, isSuperAdmin, async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+
+    // Find user by email
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Generate a new temporary password (8 characters with letters and numbers)
+    const generatePassword = () => {
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+      let password = '';
+      for (let i = 0; i < 8; i++) {
+        password += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      return password;
+    };
+
+    const newPassword = generatePassword();
+    
+    // Update user's password
+    user.password = newPassword;
+    await user.save();
+
+    res.json({ 
+      message: 'Password reset successfully',
+      newPassword: newPassword
+    });
+  } catch (error) {
+    console.error('Admin password reset error:', error);
+    res.status(500).json({ error: 'Error resetting password' });
+  }
 });
 
 module.exports = router;

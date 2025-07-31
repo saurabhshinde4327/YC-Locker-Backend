@@ -122,7 +122,7 @@ router.get('/download/:id', auth, async (req, res) => {
     }
 
     res.setHeader('Content-Type', contentType);
-    res.setHeader('Content-Disposition', `attachment; filename="${document.fileName}`);
+    res.setHeader('Content-Disposition', `attachment; filename="${document.fileName}"`);
 
     res.sendFile(path.resolve(document.filePath));
   } catch (error) {
