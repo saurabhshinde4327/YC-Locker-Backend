@@ -51,6 +51,52 @@ router.get('/users', auth, isSuperAdmin, getAllUsers);
 router.get('/documents', auth, isSuperAdmin, getAllDocuments);
 router.delete('/users/:userId', auth, isSuperAdmin, deleteUser);
 
+// Create individual user
+router.post('/users', auth, isSuperAdmin, async (req, res) => {
+  try {
+    const { name, email, phone, studentId, department } = req.body;
+
+    // Validate required fields
+    if (!name || !email || !phone || !studentId || !department) {
+      return res.status(400).json({ error: 'All fields are required' });
+    }
+
+    // Check if user already exists
+    const existingUser = await User.findOne({ $or: [{ email }, { studentId }] });
+    if (existingUser) {
+      return res.status(400).json({ error: 'Email or Student ID already exists' });
+    }
+
+    // Create new user with default password
+    const user = new User({
+      name,
+      email,
+      phone,
+      studentId,
+      department,
+      password: phone, // Use phone number as default password
+      role: 'student'
+    });
+
+    await user.save();
+
+    // Return user data without password
+    const { password: _, ...userData } = user.toObject();
+
+    res.status(201).json({
+      message: 'User created successfully',
+      user: userData
+    });
+
+  } catch (error) {
+    console.error('Create user error:', error);
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({ error: error.message });
+    }
+    res.status(500).json({ error: 'Error creating user' });
+  }
+});
+
 // Download student template
 router.get('/download-template', auth, isSuperAdmin, (req, res) => {
   const templatePath = path.join(__dirname, '../uploads/temp/student_template.csv');

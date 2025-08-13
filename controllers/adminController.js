@@ -100,7 +100,14 @@ const uploadStudents = async (req, res) => {
         const row = lines[i].split(',').map(cell => cell.trim());
         if (row.length !== headers.length) continue;
 
-        const departmentRaw = row[headers.indexOf('department')].toLowerCase().replace(/\s+/g, '-');
+        let departmentRaw = row[headers.indexOf('department')].toLowerCase().replace(/\s+/g, '-');
+        
+        // Handle special department names
+        if (departmentRaw === 'b.voc-software-development') {
+          departmentRaw = 'bvoc-software-development';
+        } else if (departmentRaw === 'fishery') {
+          departmentRaw = 'fishery';
+        }
 
         const student = {
           name: row[headers.indexOf('name')],
@@ -132,7 +139,14 @@ const uploadStudents = async (req, res) => {
         if (row.length < headers.length) continue;
 
         const values = row.map(v => v ? v.toString().trim() : '');
-        const departmentRaw = values[headers.indexOf('department')].toLowerCase().replace(/\s+/g, '-');
+        let departmentRaw = values[headers.indexOf('department')].toLowerCase().replace(/\s+/g, '-');
+        
+        // Handle special department names
+        if (departmentRaw === 'b.voc-software-development') {
+          departmentRaw = 'bvoc-software-development';
+        } else if (departmentRaw === 'fishery') {
+          departmentRaw = 'fishery';
+        }
 
         const student = {
           name: values[headers.indexOf('name')],

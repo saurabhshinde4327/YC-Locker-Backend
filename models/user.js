@@ -31,7 +31,14 @@ const userSchema = new mongoose.Schema({
       'drug-chemistry',
       'food-technology',
       'forensic-science',
-      'nanoscience-and-technology'
+      'nanoscience-and-technology',
+      'fishery',
+      'military-science',
+      'physics',
+      'music-science',
+      'plant-protection',
+      'seed-technology',
+      'instrumentation'
     ]
   },
   role: { type: String, enum: ['student', 'admin'], default: 'student' },
