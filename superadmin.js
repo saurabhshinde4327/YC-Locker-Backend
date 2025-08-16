@@ -23,8 +23,8 @@ const seedSuperAdmin = async () => {
       phone: '8668428513',
       email: 'shindesaurabh0321@gmail.com',
       studentId: 'ADMIN001',
-      phone: "8668428513",
       password: '8668428513',
+      department: 'computer-science-entire',
       role: 'admin'
     });
 
