@@ -23,7 +23,7 @@ app.use(cors({
     'https://ycis-locker.vercel.app',
     'https://yclockerspace-kavml2gog-saurabhs-projects-50210b8a.vercel.app',
     'https://ycislocker.space',
-    'www.ycislocker.space'
+    'https://www.ycislocker.space'
   ],
   credentials: true,
 }));
