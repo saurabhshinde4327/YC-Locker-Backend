@@ -5,8 +5,11 @@ const multer = require('multer');
 // Dynamic storage setup
 const storage = multer.diskStorage({
   destination: (req, res, cb) => {
-    const uploadPath = path.join(process.env.UPLOADS_DIR, req.user.studentId);
-    // Create student folder if it doesn’t exist
+    // Use default uploads directory if UPLOADS_DIR is not set
+    const uploadsDir = process.env.UPLOADS_DIR || 'uploads';
+    const uploadPath = path.join(uploadsDir, req.user.studentId);
+    
+    // Create student folder if it doesn't exist
     if (!fs.existsSync(uploadPath)) {
       fs.mkdirSync(uploadPath, { recursive: true });
     }

@@ -20,7 +20,7 @@ const userSchema = new mongoose.Schema({
       'sports',
       'statistics',
       'zoology',
-      'animation-science',
+      'animation-science', 
       'data-science',
       'artificial-intelligence',
       'bvoc-software-development',

@@ -4,7 +4,7 @@ const { auth } = require('../middleware/auth');
 const validateFile = require('../middleware/fileValidation');
 const checkStorageLimit = require('../middleware/storageLimit');
 const { upload } = require('../utils/fileUtils');
-const { uploadFile, getDocuments, searchDocuments, deleteDocument, toggleFavorite } = require('../controllers/documentController');
+const { uploadFile, getDocuments, searchDocuments, deleteDocument, toggleFavorite, recalculateUserStorage } = require('../controllers/documentController');
 const Document = require('../models/document');
 const path = require('path');
 const fs = require('fs');
@@ -14,6 +14,31 @@ router.get('/', auth, getDocuments);
 router.get('/search', auth, searchDocuments); // Fixed: Added auth middleware
 router.delete('/:id', auth, deleteDocument);
 router.patch('/:id/favorite', auth, toggleFavorite);
+router.post('/recalculate-storage', auth, async (req, res) => {
+  try {
+    const user = await recalculateUserStorage(req.user._id);
+    if (user) {
+      res.json({ 
+        message: 'Storage recalculated successfully',
+        user: {
+          _id: user._id,
+          name: user.name,
+          email: user.email,
+          phone: user.phone,
+          studentId: user.studentId,
+          department: user.department,
+          role: user.role,
+          storageUsed: user.storageUsed
+        }
+      });
+    } else {
+      res.status(500).json({ error: 'Failed to recalculate storage' });
+    }
+  } catch (error) {
+    console.error('Error recalculating storage:', error);
+    res.status(500).json({ error: 'Error recalculating storage' });
+  }
+});
 
 router.get('/view/:id', auth, async (req, res) => {
   try {
