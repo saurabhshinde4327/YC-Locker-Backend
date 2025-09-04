@@ -14,10 +14,16 @@ const {
 } = require('../controllers/adminController');
 const User = require('../models/user');
 
+// Ensure temp upload directory exists (use absolute path based on backend root)
+const tempUploadDir = path.join(__dirname, '..', 'uploads', 'temp');
+if (!fs.existsSync(tempUploadDir)) {
+  fs.mkdirSync(tempUploadDir, { recursive: true });
+}
+
 // Configure multer for file uploads (do this BEFORE using it!)
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, 'uploads/temp/');
+    cb(null, tempUploadDir);
   },
   filename: function (req, file, cb) {
     cb(null, Date.now() + '-' + file.originalname);
@@ -33,19 +39,32 @@ const upload = multer({
     const allowedTypes = [
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       'application/vnd.ms-excel',
-      'text/csv',
-      'application/pdf'
+      'text/csv'
     ];
     if (allowedTypes.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error('Invalid file type. Only Excel, CSV, and PDF files are allowed.'));
+      cb(new Error('Invalid file type. Only Excel and CSV files are allowed.'));
     }
   }
 });
 
-// 🛠 DO NOT register the same route twice
-router.post('/upload-students', auth, isSuperAdmin, upload.single('file'), uploadStudents);
+// Upload students with explicit multer error handling to avoid 500s
+router.post(
+  '/upload-students',
+  auth,
+  isSuperAdmin,
+  (req, res, next) => {
+    upload.single('file')(req, res, function (err) {
+      if (err) {
+        const status = err instanceof multer.MulterError ? 400 : 400;
+        return res.status(status).json({ error: err.message });
+      }
+      next();
+    });
+  },
+  uploadStudents
+);
 
 router.get('/users', auth, isSuperAdmin, getAllUsers);
 router.get('/documents', auth, isSuperAdmin, getAllDocuments);
@@ -103,12 +122,49 @@ router.get('/download-template', auth, isSuperAdmin, (req, res) => {
   res.download(templatePath, 'student_template.csv');
 });
 
-// Check env vars
+// Test env vars
 router.get('/test-env', auth, isSuperAdmin, (req, res) => {
   res.json({ 
     mongoUri: process.env.MONGODB_URI,
     hasMongoUri: !!process.env.MONGODB_URI
   });
+});
+
+// Test department normalization
+router.post('/test-department', auth, isSuperAdmin, (req, res) => {
+  try {
+    const { department } = req.body;
+    if (!department) {
+      return res.status(400).json({ error: 'Department is required' });
+    }
+
+    // Import the normalizeDepartment function
+    const { normalizeDepartment } = require('../controllers/adminController');
+    
+    const normalized = normalizeDepartment(department);
+    const validDepartments = [
+      'botany', 'chemistry', 'electronics', 'english', 'mathematics', 'microbiology',
+      'sports', 'statistics', 'zoology', 'animation-science', 'data-science',
+      'artificial-intelligence', 'bvoc-software-development', 'bioinformatics',
+      'computer-application', 'computer-science-entire', 'computer-science-optional',
+      'drug-chemistry', 'food-technology', 'forensic-science', 'nanoscience-and-technology',
+      'fishery', 'military-science', 'physics', 'music-science', 'plant-protection',
+      'seed-technology', 'instrumentation'
+    ];
+    
+    const isValid = validDepartments.includes(normalized);
+    
+    res.json({
+      original: department,
+      normalized: normalized,
+      isValid: isValid,
+      validDepartments: validDepartments,
+      message: isValid ? 'Department is valid' : 'Department is invalid'
+    });
+  } catch (error) {
+    console.error('Department test error:', error);
+    res.status(500).json({ error: 'Department test failed' });
+  }
 });
 
 // Backup database

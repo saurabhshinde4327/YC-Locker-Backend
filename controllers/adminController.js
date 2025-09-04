@@ -4,6 +4,26 @@ const fs = require('fs');
 const path = require('path');
 const XLSX = require('xlsx');
 
+// Helper function to normalize department names
+const normalizeDepartment = (department) => {
+  if (!department) return null;
+  
+  let normalized = department.toLowerCase().trim().replace(/\s+/g, '-');
+  
+  // Handle special department names and normalize them
+  if (normalized === 'b.voc-software-development' || normalized === 'bvoc-software-development' || normalized === 'bvoc' || normalized === 'b.voc') {
+    return 'bvoc-software-development';
+  } else if (normalized === 'fishery' || normalized === 'fisheries') {
+    return 'fishery';
+  } else if (normalized === 'plant-protection' || normalized === 'plantprotection' || normalized === 'plant-protection-science') {
+    return 'plant-protection';
+  } else if (normalized === 'physics' || normalized === 'physical-science') {
+    return 'physics';
+  }
+  
+  return normalized;
+};
+
 // Get all users (excluding passwords)
 const getAllUsers = async (req, res) => {
   try {
@@ -83,6 +103,8 @@ const uploadStudents = async (req, res) => {
 
     let students = [];
     const requiredHeaders = ['name', 'email', 'phone', 'studentid', 'department'];
+    // Collect errors during parsing so we can report them later
+    const errors = [];
 
     // Parse CSV
     if (ext === '.csv') {
@@ -100,14 +122,14 @@ const uploadStudents = async (req, res) => {
         const row = lines[i].split(',').map(cell => cell.trim());
         if (row.length !== headers.length) continue;
 
-        let departmentRaw = row[headers.indexOf('department')].toLowerCase().replace(/\s+/g, '-');
+        let departmentRaw = normalizeDepartment(row[headers.indexOf('department')]);
         
-        // Handle special department names
-        if (departmentRaw === 'b.voc-software-development') {
-          departmentRaw = 'bvoc-software-development';
-        } else if (departmentRaw === 'fishery') {
-          departmentRaw = 'fishery';
+        if (!departmentRaw) {
+          errors.push(`Invalid or missing department for ${row[headers.indexOf('name')]}: "${row[headers.indexOf('department')]}"`);
+          continue;
         }
+        
+        console.log(`Processing student: ${row[headers.indexOf('name')]} with department: "${row[headers.indexOf('department')]}" -> normalized to: "${departmentRaw}"`);
 
         const student = {
           name: row[headers.indexOf('name')],
@@ -139,14 +161,14 @@ const uploadStudents = async (req, res) => {
         if (row.length < headers.length) continue;
 
         const values = row.map(v => v ? v.toString().trim() : '');
-        let departmentRaw = values[headers.indexOf('department')].toLowerCase().replace(/\s+/g, '-');
+        let departmentRaw = normalizeDepartment(values[headers.indexOf('department')]);
         
-        // Handle special department names
-        if (departmentRaw === 'b.voc-software-development') {
-          departmentRaw = 'bvoc-software-development';
-        } else if (departmentRaw === 'fishery') {
-          departmentRaw = 'fishery';
+        if (!departmentRaw) {
+          errors.push(`Invalid or missing department for ${values[headers.indexOf('name')]}: "${values[headers.indexOf('department')]}"`);
+          continue;
         }
+        
+        console.log(`Processing student: ${values[headers.indexOf('name')]} with department: "${values[headers.indexOf('department')]}" -> normalized to: "${departmentRaw}"`);
 
         const student = {
           name: values[headers.indexOf('name')],
@@ -166,13 +188,28 @@ const uploadStudents = async (req, res) => {
     if (!students.length) return res.status(400).json({ error: 'No valid student records found.' });
 
     const created = [];
-    const errors = [];
 
     for (const student of students) {
       try {
         const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(student.email);
         if (!validEmail) {
           errors.push(`Invalid email for ${student.name}`);
+          continue;
+        }
+
+        // Validate department before creating user
+        const validDepartments = [
+          'botany', 'chemistry', 'electronics', 'english', 'mathematics', 'microbiology',
+          'sports', 'statistics', 'zoology', 'animation-science', 'data-science',
+          'artificial-intelligence', 'bvoc-software-development', 'bioinformatics',
+          'computer-application', 'computer-science-entire', 'computer-science-optional',
+          'drug-chemistry', 'food-technology', 'forensic-science', 'nanoscience-and-technology',
+          'fishery', 'military-science', 'physics', 'music-science', 'plant-protection',
+          'seed-technology', 'instrumentation'
+        ];
+        
+        if (!validDepartments.includes(student.department)) {
+          errors.push(`Invalid department "${student.department}" for ${student.name}. Valid departments: ${validDepartments.join(', ')}`);
           continue;
         }
 
@@ -208,4 +245,5 @@ module.exports = {
   getAllDocuments,
   deleteUser,
   uploadStudents,
+  normalizeDepartment,
 };
